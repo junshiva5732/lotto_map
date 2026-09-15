@@ -1,0 +1,107 @@
+# 로또 명당 지도 (lotto_map)
+
+전국 로또 6/45 1등·2등 배출 판매점을 지도·랭킹으로 보여주고, 판매점별 메모를 남길 수 있는 앱.
+AdMob 광고(배너 / 전면 / 보상형)로 수익화. Flutter 로 작성, Android + iOS 대상.
+
+## 구조
+
+```
+lib/
+  main.dart                       앱 진입, 테마, AppServices(서비스 묶음)
+  ads/ad_ids.dart                 AdMob 광고 단위 ID  ← 출시 전 교체
+  ads/ad_manager.dart             전면(상세 3회마다)·보상형 광고 싱글톤
+  widgets/banner_ad_widget.dart   하단 적응형 배너
+  widgets/store_widgets.dart      당첨 배지, 판매점 타일, 필터 칩
+  models/store.dart               Store / Win 모델, 회차→추첨일 계산
+  services/store_repository.dart  내장 JSON 로드(isolate) + 동행복권에서 새 회차 자동 갱신·캐시
+  services/memo_service.dart      메모·즐겨찾기·평점·방문일 (SharedPreferences)
+  services/lucky_service.dart     행운 번호: 하루 1회 무료 + 보상형 광고로 충전
+  services/app_state.dart         1등만/기간 필터, 탭, "지도에서 보기" 요청
+  services/map_config.dart        타일 URL·초기 위치 (TILE_URL dart-define 으로 교체 가능)
+  screens/home_shell.dart         탭 4개(지도·랭킹·내 메모·행운 번호) + 공통 배너
+  screens/map_screen.dart         flutter_map + 격자 클러스터링 + 내 위치 + 마커 바텀시트
+  screens/ranking_screen.dart     1등 횟수 랭킹, 검색, 시·도 필터
+  screens/memo_list_screen.dart   내 메모 목록 (스와이프 삭제)
+  screens/store_detail_screen.dart 상세: 정보·길찾기·전화·메모(자동 저장)·당첨 이력
+  screens/lucky_screen.dart       행운 번호 뽑기
+  screens/settings_screen.dart    데이터 기준·출처·개인정보처리방침·전체 삭제
+assets/data/stores.json           내장 판매점 데이터 (tool/fetch_stores.py 로 생성)
+tool/fetch_stores.py              동행복권 당첨 판매점 API 262회~최신 수집 (회차별 캐시, 재실행 시 이어받기)
+tool/make_icon.py                 앱 아이콘 생성
+tool/make_store_assets.py         스토어 이미지 생성
+docs/privacy-policy.html          개인정보처리방침 (GitHub Pages)
+store/listing.md                  스토어 등록 문구·설정 값
+```
+
+## 데이터
+
+- 출처: 동행복권 `wnprchsplcsrch/selectLtWnShp.do` (당첨 판매점 조회 화면이 쓰는 JSON, 좌표 포함). 262회부터 데이터가 있다.
+- 갱신: `python tool/fetch_stores.py` → `assets/data/stores.json` 재생성 후 앱 업데이트.
+  회차별 원본은 `tool/cache/` 에 캐시되어 실패한 회차만 다시 받는다. 사이트가 요청을 막으면(연결 타임아웃) 잠시 후 재실행.
+- 앱 실행 시 `StoreRepository.refresh()` 가 내장 데이터 이후 회차(최대 30회)를 받아 앱 문서 폴더에 캐시·병합한다.
+  실패해도 내장 데이터로 동작한다.
+
+## 광고 노출 지점
+
+| 위치 | 종류 | 동작 |
+|---|---|---|
+| 모든 탭 하단·상세 하단 | 배너 | 항상 표시 |
+| 판매점 상세 진입 | 전면 | 3번째 진입마다 (`AdManager.interstitialEvery`) |
+| 행운 번호 탭 | 보상형 | 무료 1회 소진 후 "광고 보고 뽑기" → 3회 충전 |
+
+## 개발 빌드
+
+```bash
+flutter pub get
+flutter build apk --debug
+```
+
+에뮬레이터: `flutter emulators --launch Small_Phone_API_35` 후 `flutter run`.
+
+### 이 PC 전용 메모
+Java 의 AF_UNIX 소켓이 `%TEMP%` 아래에서 실패해 Gradle 이 "Unable to establish loopback connection" 으로
+죽는 문제가 있어, `android/gradle.properties` 와 `android/gradlew.bat` 에
+`-Djdk.net.unixdomain.tmpdir=C:/tmp` 를 넣어 두었다. `C:\tmp` 폴더가 있어야 한다.
+
+## 지도 타일
+
+개발·검증은 OpenStreetMap 공개 타일을 쓴다. OSM 타일 서버는 대량 배포 앱에 사용 허가가 필요하므로
+(https://operations.osmfoundation.org/policies/tiles/) 출시 전 키 발급형 제공자로 바꾸는 것을 권장:
+
+```bash
+flutter build appbundle --release --dart-define=TILE_URL=https://api.vworld.kr/req/wmts/1.0.0/<VWORLD_KEY>/Base/{z}/{y}/{x}.png
+```
+
+(VWorld 는 국토부 무료 키. 바꾸면 `MapConfig.attribution` 이 비고 설정 화면의 OSM 표기도 사라진다.)
+
+## 출시 체크리스트
+
+### 1. AdMob
+- [ ] https://admob.google.com 에서 앱 등록 (Android) — 앱 이름 "로또 명당 지도", 패키지 `com.jun5731.lotto_map`
+- [ ] 광고 단위 3개 생성: 배너 / 전면 / 보상형
+- [ ] `lib/ads/ad_ids.dart` 의 `_androidReal` 을 실제 ID 로 교체
+- [ ] `android/app/src/main/AndroidManifest.xml` 의 `APPLICATION_ID` 교체 (현재 테스트 앱 ID)
+- [ ] 개발 중 실제 ID로 광고 클릭 금지 (계정 정지 사유)
+- [ ] AdMob 결제·세금 정보는 daily_fortune 과 같은 계정이므로 추가 작업 없음
+
+### 2. 개인정보 / 정책
+- [x] 개인정보처리방침: https://junshiva5732.github.io/lotto_map/privacy-policy.html (원본 `docs/privacy-policy.html`)
+- [ ] iOS: ATT 팝업 — iOS 출시 시 `app_tracking_transparency` 로 요청
+- [ ] EU 대상이면 UMP(동의 메시지) 설정
+
+### 3. Android 출시
+- [x] 릴리즈 서명 키: `android/upload-keystore.jks` + `android/key.properties` (daily_fortune 과 같은 업로드 키 재사용, git 제외 — **반드시 백업**)
+- [x] 앱 아이콘: `tool/make_icon.py` → `dart run flutter_launcher_icons`
+- [x] 위치 권한: 선택 사용. Play 데이터 보안 양식 작성 시 `store/listing.md` 참고
+- [ ] (권장) 지도 타일을 키 발급형으로 교체 (위 "지도 타일")
+- [ ] `flutter build appbundle --release` → `.aab` 업로드
+- [ ] 스토어 등록 정보: `store/listing.md`, `store/icon-512.png`, `store/feature-graphic.png`, `store/screenshots/`
+
+### 4. iOS 출시 (Mac 필요)
+- [ ] Apple Developer Program, Xcode 팀 설정, `pod install`
+- [ ] `ios/Runner/Info.plist` 에 `NSLocationWhenInUseUsageDescription`, `GADApplicationIdentifier` 추가
+- [ ] `flutter build ipa` → App Store Connect
+
+### 5. 출시 후
+- [ ] 매주 토요일 추첨 후 앱이 자동 갱신하지만, 몇 달에 한 번 `tool/fetch_stores.py` 로 내장 데이터를 갱신해 업데이트
+- [ ] 동행복권 사이트 구조가 바뀌면 `StoreRepository._fetchRound` 와 `tool/fetch_stores.py` 수정
