@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
 import '../services/map_config.dart';
+import '../services/navigation_apps.dart';
 
 /// 데이터 기준·출처·개인정보처리방침·초기화
 class SettingsScreen extends StatelessWidget {
@@ -54,6 +55,17 @@ class SettingsScreen extends StatelessWidget {
                     ? '배경지도: 브이월드(VWorld) 공간정보 오픈플랫폼, 국토교통부'
                     : '© ${MapConfig.attribution}'),
               ),
+            ValueListenableBuilder<NavApp?>(
+              valueListenable: NavAppPrefs.current,
+              builder: (context, app, _) => ListTile(
+                leading: const Icon(Icons.directions_outlined),
+                title: const Text('길찾기 기본 앱'),
+                subtitle: Text(app == null ? '매번 선택' : app.label),
+                trailing: app == null
+                    ? null
+                    : TextButton(onPressed: () => NavAppPrefs.set(null), child: const Text('매번 선택으로')),
+              ),
+            ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.privacy_tip_outlined),

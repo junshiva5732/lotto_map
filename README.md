@@ -23,6 +23,7 @@ lib/
   screens/ranking_screen.dart     1등 횟수 랭킹, 검색, 시·도 필터
   screens/memo_list_screen.dart   내 메모 목록 (스와이프 삭제)
   screens/store_detail_screen.dart 상세: 정보·길찾기·전화·메모(자동 저장)·당첨 이력
+  services/navigation_apps.dart   길찾기 앱 선택(네이버/카카오/T맵/구글/기타), 기본 앱 기억, 미설치 시 웹·스토어 폴백
   screens/lucky_screen.dart       행운 번호 뽑기
   screens/settings_screen.dart    데이터 기준·출처·개인정보처리방침·전체 삭제
 assets/data/stores.json           내장 판매점 데이터 (tool/fetch_stores.py 로 생성)

@@ -9,6 +9,7 @@ import '../ads/ad_manager.dart';
 import '../main.dart';
 import '../models/store.dart';
 import '../services/memo_service.dart';
+import '../services/navigation_apps.dart';
 import '../widgets/banner_ad_widget.dart';
 import '../widgets/store_widgets.dart';
 
@@ -72,14 +73,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     _memos.save(memo.copyWith(text: _text.text));
   }
 
-  Future<void> _openMap() async {
-    // geo: 는 설치된 지도 앱(네이버/카카오/구글)이 받는다. 없으면 웹 지도로.
-    final q = Uri.encodeComponent(store.name);
-    final geo = Uri.parse('geo:${store.lat},${store.lng}?q=${store.lat},${store.lng}($q)');
-    if (await canLaunchUrl(geo) && await launchUrl(geo)) return;
-    final web = Uri.parse('https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}');
-    await launchUrl(web, mode: LaunchMode.externalApplication);
-  }
+  Future<void> _openMap({bool pick = false}) => openDirections(context, store, forcePicker: pick);
 
   Future<void> _call() async {
     final tel = store.tel;
@@ -135,6 +129,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                       child: FilledButton.icon(
                         style: _tight,
                         onPressed: _openMap,
+                        onLongPress: () => _openMap(pick: true),
                         icon: const Icon(Icons.directions),
                         label: const Text('길찾기'),
                       ),

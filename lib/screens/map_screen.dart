@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import '../main.dart';
 import '../models/store.dart';
 import '../services/map_config.dart';
+import '../services/navigation_apps.dart';
 import '../widgets/store_widgets.dart';
 import 'store_detail_screen.dart';
 
@@ -258,16 +259,32 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ],
                   const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        StoreDetailScreen.open(context, s, st);
-                      },
-                      icon: const Icon(Icons.edit_note),
-                      label: Text(memo == null || memo.text.isEmpty ? '상세 보기 · 메모 쓰기' : '상세 보기 · 메모 수정'),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            StoreDetailScreen.open(context, s, st);
+                          },
+                          icon: const Icon(Icons.edit_note),
+                          label: Text(memo == null || memo.text.isEmpty ? '상세 · 메모 쓰기' : '상세 · 메모 수정'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          openDirections(context, st);
+                        },
+                        onLongPress: () {
+                          Navigator.of(ctx).pop();
+                          openDirections(context, st, forcePicker: true);
+                        },
+                        icon: const Icon(Icons.directions),
+                        label: const Text('길찾기'),
+                      ),
+                    ],
                   ),
                 ],
               ),

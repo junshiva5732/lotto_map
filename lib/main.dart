@@ -8,6 +8,7 @@ import 'screens/home_shell.dart';
 import 'services/app_state.dart';
 import 'services/lucky_service.dart';
 import 'services/memo_service.dart';
+import 'services/navigation_apps.dart';
 import 'services/store_repository.dart';
 
 /// 앱 전역 서비스 묶음. 화면에 생성자로 넘긴다.
@@ -38,6 +39,7 @@ Future<void> main() async {
 Future<AppServices> _bootstrap() async {
   await initializeDateFormatting('ko');
   final prefs = await SharedPreferences.getInstance();
+  NavAppPrefs.init(prefs);
   final repo = await StoreRepository.load();
   final services = AppServices(
     repo: repo,

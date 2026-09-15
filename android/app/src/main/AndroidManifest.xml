@@ -53,5 +53,22 @@
             <action android:name="android.intent.action.DIAL"/>
             <data android:scheme="tel"/>
         </intent>
+        <!-- 길찾기 앱 스킴 (네이버 지도 / 카카오맵 / T맵 / Play 스토어) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="nmap"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="kakaomap"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="tmap"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="market"/>
+        </intent>
     </queries>
 </manifest>
