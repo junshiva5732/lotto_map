@@ -67,7 +67,7 @@ def main():
         if rows is not None:
             with open(cp, "w", encoding="utf-8") as f:
                 json.dump(rows, f, ensure_ascii=False)
-            time.sleep(0.25)
+            time.sleep(1.0)  # 사이트가 빠른 연속 요청을 차단하므로 천천히
         return rows
 
     stores = {}
