@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../main.dart';
+import '../services/memo_service.dart';
 import '../widgets/store_widgets.dart';
 import 'settings_screen.dart';
 import 'store_detail_screen.dart';
@@ -116,9 +117,40 @@ class _MemoListScreenState extends State<MemoListScreen> {
               ),
             );
           }
+          final totalSpent = visitedAll.fold(0, (a, m) => a + m.spent);
+          final totalWon = visitedAll.fold(0, (a, m) => a + m.won);
+
           return Column(
             children: [
               segBar,
+              if (_seg == _Seg.visited && (totalSpent > 0 || totalWon > 0))
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Card(
+                    margin: EdgeInsets.zero,
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          _Sum(label: '구매', value: formatWon(totalSpent)),
+                          _Sum(label: '당첨', value: formatWon(totalWon)),
+                          _Sum(
+                            label: '수익',
+                            value: formatWon(totalWon - totalSpent),
+                            color:
+                                totalWon - totalSpent >= 0
+                                    ? const Color(0xFF2E7D32)
+                                    : Theme.of(context).colorScheme.error,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               if (_seg == _Seg.visited && memos.isEmpty)
                 Expanded(
                   child: Center(
@@ -250,6 +282,15 @@ class _MemoListScreenState extends State<MemoListScreen> {
                                         Theme.of(context).colorScheme.outline,
                                   ),
                                 ),
+                              if (m.spent > 0 || m.won > 0)
+                                Text(
+                                  '구매 ${formatWon(m.spent)} · 당첨 ${formatWon(m.won)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        Theme.of(context).colorScheme.outline,
+                                  ),
+                                ),
                               if (m.text.isNotEmpty)
                                 Text(
                                   m.text,
@@ -270,6 +311,37 @@ class _MemoListScreenState extends State<MemoListScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _Sum extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+  const _Sum({required this.label, required this.value, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.outline,
+            ),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            child: Text(
+              value,
+              style: TextStyle(fontWeight: FontWeight.w800, color: color),
+            ),
+          ),
+        ],
       ),
     );
   }

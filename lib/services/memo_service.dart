@@ -12,6 +12,10 @@ class StoreMemo {
   /// 0 = 없음, 1~5
   final int rating;
   final DateTime? visitedAt;
+
+  /// 이 판매점에서 산 로또 금액(원) / 당첨된 금액(원). 방문 기록용.
+  final int spent;
+  final int won;
   final DateTime updatedAt;
 
   const StoreMemo({
@@ -20,10 +24,18 @@ class StoreMemo {
     this.favorite = false,
     this.rating = 0,
     this.visitedAt,
+    this.spent = 0,
+    this.won = 0,
     required this.updatedAt,
   });
 
-  bool get isEmpty => text.isEmpty && !favorite && rating == 0 && visitedAt == null;
+  bool get isEmpty =>
+      text.isEmpty &&
+      !favorite &&
+      rating == 0 &&
+      visitedAt == null &&
+      spent == 0 &&
+      won == 0;
 
   StoreMemo copyWith({
     String? text,
@@ -31,33 +43,55 @@ class StoreMemo {
     int? rating,
     DateTime? visitedAt,
     bool clearVisited = false,
-  }) =>
-      StoreMemo(
-        storeId: storeId,
-        text: text ?? this.text,
-        favorite: favorite ?? this.favorite,
-        rating: rating ?? this.rating,
-        visitedAt: clearVisited ? null : (visitedAt ?? this.visitedAt),
-        updatedAt: DateTime.now(),
-      );
+    int? spent,
+    int? won,
+  }) => StoreMemo(
+    storeId: storeId,
+    text: text ?? this.text,
+    favorite: favorite ?? this.favorite,
+    rating: rating ?? this.rating,
+    visitedAt: clearVisited ? null : (visitedAt ?? this.visitedAt),
+    spent: spent ?? this.spent,
+    won: won ?? this.won,
+    updatedAt: DateTime.now(),
+  );
 
   Map<String, dynamic> toJson() => {
-        'storeId': storeId,
-        'text': text,
-        'favorite': favorite,
-        'rating': rating,
-        'visitedAt': visitedAt?.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'storeId': storeId,
+    'text': text,
+    'favorite': favorite,
+    'rating': rating,
+    'visitedAt': visitedAt?.toIso8601String(),
+    'spent': spent,
+    'won': won,
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   factory StoreMemo.fromJson(Map<String, dynamic> j) => StoreMemo(
-        storeId: j['storeId'] as String,
-        text: j['text'] as String? ?? '',
-        favorite: j['favorite'] as bool? ?? false,
-        rating: j['rating'] as int? ?? 0,
-        visitedAt: j['visitedAt'] == null ? null : DateTime.tryParse(j['visitedAt'] as String),
-        updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? '') ?? DateTime.now(),
-      );
+    storeId: j['storeId'] as String,
+    text: j['text'] as String? ?? '',
+    favorite: j['favorite'] as bool? ?? false,
+    rating: j['rating'] as int? ?? 0,
+    visitedAt:
+        j['visitedAt'] == null
+            ? null
+            : DateTime.tryParse(j['visitedAt'] as String),
+    spent: (j['spent'] as num?)?.toInt() ?? 0,
+    won: (j['won'] as num?)?.toInt() ?? 0,
+    updatedAt:
+        DateTime.tryParse(j['updatedAt'] as String? ?? '') ?? DateTime.now(),
+  );
+}
+
+/// 1234567 → "1,234,567원"
+String formatWon(int v) {
+  final s = v.abs().toString();
+  final buf = StringBuffer();
+  for (var i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+    buf.write(s[i]);
+  }
+  return '${v < 0 ? '-' : ''}$buf원';
 }
 
 class MemoService extends ChangeNotifier {
@@ -85,7 +119,8 @@ class MemoService extends ChangeNotifier {
 
   /// 최근 수정순
   List<StoreMemo> get all =>
-      _memos.values.toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      _memos.values.toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
   Future<void> save(StoreMemo memo) async {
     if (memo.isEmpty) {
@@ -94,11 +129,16 @@ class MemoService extends ChangeNotifier {
       _memos[memo.storeId] = memo;
     }
     notifyListeners();
-    await _prefs.setString(_key, jsonEncode(_memos.values.map((m) => m.toJson()).toList()));
+    await _prefs.setString(
+      _key,
+      jsonEncode(_memos.values.map((m) => m.toJson()).toList()),
+    );
   }
 
   Future<void> toggleFavorite(String storeId) {
-    final cur = _memos[storeId] ?? StoreMemo(storeId: storeId, updatedAt: DateTime.now());
+    final cur =
+        _memos[storeId] ??
+        StoreMemo(storeId: storeId, updatedAt: DateTime.now());
     return save(cur.copyWith(favorite: !cur.favorite));
   }
 

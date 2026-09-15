@@ -41,7 +41,10 @@ class StoreDetailScreen extends StatefulWidget {
 
 class _StoreDetailScreenState extends State<StoreDetailScreen> {
   late final TextEditingController _text;
+  late final TextEditingController _spent;
+  late final TextEditingController _won;
   Timer? _debounce;
+  Timer? _moneyDebounce;
 
   MemoService get _memos => widget.services.memos;
   Store get store => widget.store;
@@ -54,15 +57,39 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     super.initState();
     _text = TextEditingController(text: memo.text);
     _text.addListener(_onTextChanged);
+    _spent = TextEditingController(
+      text: memo.spent == 0 ? '' : '${memo.spent}',
+    );
+    _won = TextEditingController(text: memo.won == 0 ? '' : '${memo.won}');
+    _spent.addListener(_onMoneyChanged);
+    _won.addListener(_onMoneyChanged);
     _memos.addListener(_onMemos);
+  }
+
+  void _onMoneyChanged() {
+    _moneyDebounce?.cancel();
+    _moneyDebounce = Timer(const Duration(milliseconds: 600), _saveMoney);
+  }
+
+  void _saveMoney() {
+    final spent =
+        int.tryParse(_spent.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final won = int.tryParse(_won.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final m = memo;
+    if (spent == m.spent && won == m.won) return;
+    _memos.save(m.copyWith(spent: spent, won: won));
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _moneyDebounce?.cancel();
     _saveText();
+    _saveMoney();
     _memos.removeListener(_onMemos);
     _text.dispose();
+    _spent.dispose();
+    _won.dispose();
     super.dispose();
   }
 
@@ -241,6 +268,40 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                     ),
                               ),
                           ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _spent,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: '구매 금액',
+                                    suffixText: '원',
+                                    hintText: '예) 5000',
+                                    isDense: true,
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextField(
+                                  controller: _won,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: '당첨 금액',
+                                    suffixText: '원',
+                                    hintText: '예) 50000',
+                                    isDense: true,
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         TextField(
                           controller: _text,

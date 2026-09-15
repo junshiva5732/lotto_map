@@ -14,7 +14,7 @@ lib/
   widgets/store_widgets.dart      당첨 배지, 판매점 타일, 필터 칩
   models/store.dart               Store / Win 모델, 회차→추첨일 계산
   services/store_repository.dart  내장 JSON 로드(isolate) + 동행복권에서 새 회차 자동 갱신·캐시
-  services/memo_service.dart      메모·즐겨찾기·평점·방문일 (SharedPreferences)
+  services/memo_service.dart      메모·즐겨찾기·평점·방문일·구매/당첨 금액 (SharedPreferences)
   services/lucky_service.dart     행운 번호: 하루 1회 무료 + 보상형 광고로 충전
   services/app_state.dart         1등만/1등 N회 이상/기간 필터, 탭, "지도에서 보기" 요청
   services/map_config.dart        타일 URL·초기 위치 (TILE_URL dart-define 으로 교체 가능)
