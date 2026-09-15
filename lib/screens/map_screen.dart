@@ -41,6 +41,9 @@ class _MapScreenState extends State<MapScreen> {
   /// "모두 지도에 보기" 로 적용된 검색 결과. null 이면 필터 전체를 그린다.
   List<Store>? _applied;
 
+  /// 마지막으로 탭한 판매점. 핀을 키우고 테두리를 바꿔 어느 점포를 보고 있는지 표시한다.
+  String? _selectedId;
+
   AppServices get s => widget.services;
 
   @override
@@ -149,21 +152,29 @@ class _MapScreenState extends State<MapScreen> {
         }
       }
     }
+    // 선택된 핀이 다른 핀에 가려지지 않게 맨 뒤(위)로
+    if (_selectedId != null) {
+      final i = markers.indexWhere((m) => m.key == ValueKey(_selectedId));
+      if (i >= 0) markers.add(markers.removeAt(i));
+    }
     setState(() => _markers = markers);
   }
 
   Marker _storeMarker(Store st, int minRound) {
     final (first, second) = st.countsSince(minRound);
     final isFav = s.memos.isFavorite(st.id);
+    final selected = st.id == _selectedId;
     final big = first >= 3;
-    final size = big ? 44.0 : 36.0;
+    var size = big ? 44.0 : 36.0;
+    if (selected) size += 14;
     return Marker(
+      key: ValueKey(st.id),
       point: LatLng(st.lat, st.lng),
       width: size,
       height: size + 6,
       alignment: Alignment.topCenter,
       child: GestureDetector(
-        onTap: () => _showStoreSheet(st),
+        onTap: () => _selectStore(st),
         child: _Pin(
           label: first > 0 ? '$first' : '2',
           color: first > 0 ? kGold : kSilver,
@@ -171,9 +182,17 @@ class _MapScreenState extends State<MapScreen> {
           favorite: isFav,
           closed: st.isClosed,
           secondOnly: first == 0 && second > 0,
+          selected: selected,
         ),
       ),
     );
+  }
+
+  /// 핀 탭: 선택 표시 + 바텀시트
+  void _selectStore(Store st) {
+    _selectedId = st.id;
+    _rebuildMarkers();
+    _showStoreSheet(st);
   }
 
   Marker _clusterMarker(_Cluster c, double zoom) {
@@ -317,8 +336,7 @@ class _MapScreenState extends State<MapScreen> {
     _searchFocus.unfocus();
     _applied = null;
     _map.move(LatLng(st.lat, st.lng), 16.5);
-    _rebuildMarkers();
-    _showStoreSheet(st);
+    _selectStore(st);
   }
 
   void _toast(String msg) {
@@ -464,6 +482,13 @@ class _MapScreenState extends State<MapScreen> {
               _consumeFocus();
             },
             onPositionChanged: (_, _) => _scheduleRebuild(),
+            onTap: (_, _) {
+              _searchFocus.unfocus();
+              if (_selectedId != null) {
+                _selectedId = null;
+                _rebuildMarkers();
+              }
+            },
           ),
           children: [
             TileLayer(
@@ -723,6 +748,7 @@ class _Pin extends StatelessWidget {
   final bool favorite;
   final bool closed;
   final bool secondOnly;
+  final bool selected;
   const _Pin({
     required this.label,
     required this.color,
@@ -730,56 +756,89 @@ class _Pin extends StatelessWidget {
     required this.favorite,
     required this.closed,
     required this.secondOnly,
+    this.selected = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final fill = closed ? color.withValues(alpha: .45) : color;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: closed ? color.withValues(alpha: .45) : color,
-            border: Border.all(
-              color: favorite ? Colors.redAccent : Colors.white,
-              width: favorite ? 3 : 2,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                blurRadius: 5,
-                color: Colors.black38,
-                offset: Offset(0, 2),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: fill,
+                border: Border.all(
+                  color: selected ? const Color(0xFFD32F2F) : Colors.white,
+                  width: selected ? 4 : 2,
+                ),
+                boxShadow:
+                    selected
+                        ? [
+                          BoxShadow(
+                            blurRadius: 14,
+                            spreadRadius: 3,
+                            color: const Color(
+                              0xFFD32F2F,
+                            ).withValues(alpha: .55),
+                          ),
+                        ]
+                        : const [
+                          BoxShadow(
+                            blurRadius: 5,
+                            color: Colors.black38,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
               ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child:
-              secondOnly
-                  ? const Text(
-                    '2등',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black87,
-                    ),
-                  )
-                  : Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: size * .42,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black87,
-                    ),
+              alignment: Alignment.center,
+              child:
+                  secondOnly
+                      ? const Text(
+                        '2등',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
+                        ),
+                      )
+                      : Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: size * .42,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.black87,
+                        ),
+                      ),
+            ),
+            // 즐겨찾기 별 배지
+            if (favorite)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
                   ),
+                  child: const Icon(
+                    Icons.star,
+                    size: 12,
+                    color: Colors.redAccent,
+                  ),
+                ),
+              ),
+          ],
         ),
         // 아래쪽 꼬리
-        CustomPaint(
-          size: const Size(10, 6),
-          painter: _TailPainter(closed ? color.withValues(alpha: .45) : color),
-        ),
+        CustomPaint(size: const Size(10, 6), painter: _TailPainter(fill)),
       ],
     );
   }

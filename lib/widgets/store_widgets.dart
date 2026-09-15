@@ -170,7 +170,7 @@ class StoreTile extends StatelessWidget {
   }
 }
 
-/// 1등만 / 기간 필터 칩 줄. [AppState] 를 직접 바꾼다.
+/// 1등만 / 1등 횟수 / 기간 필터 칩 줄. [AppState] 를 직접 바꾼다.
 class FilterBar extends StatelessWidget {
   final AppState state;
   const FilterBar({super.key, required this.state});

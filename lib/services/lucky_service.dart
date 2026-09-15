@@ -3,10 +3,10 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 행운 번호 뽑기. 하루 1세트 무료, 보상형 광고 1회당 [perReward] 세트 추가.
+/// 행운 번호 뽑기. 하루 1세트 무료, 보상형 광고 1회당 [perReward] 세트(=1) 추가.
 /// 뽑은 번호는 당일 동안 보관한다.
 class LuckyService extends ChangeNotifier {
-  static const perReward = 3;
+  static const perReward = 1;
   String get perRewardLabel => '$perReward회';
   static const _kDate = 'lucky_date';
   static const _kCredits = 'lucky_credits';

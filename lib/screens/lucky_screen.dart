@@ -18,39 +18,17 @@ class _LuckyScreenState extends State<LuckyScreen> {
 
   void _draw() {
     final picked = s.lucky.draw();
-    if (picked == null) _askReward();
+    if (picked == null) _watchAd(); // 무료 소진 → 바로 광고
   }
 
-  void _askReward() {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('오늘 무료 뽑기를 다 썼어요'),
-        content: Text('짧은 광고를 보면 ${s.lucky.perRewardLabel} 더 뽑을 수 있어요.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('다음에')),
-          FilledButton.icon(
-            icon: const Icon(Icons.play_circle_outline),
-            label: const Text('광고 보고 뽑기'),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _watchAd();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
+  /// 보상형 광고를 바로 띄우고, 끝까지 보면 즉시 1세트 뽑는다.
   void _watchAd() {
-    final ok = AdManager.instance.showRewarded(onReward: () {
-      s.lucky.addReward();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${s.lucky.perRewardLabel} 추가됐어요!')),
-        );
-      }
-    });
+    final ok = AdManager.instance.showRewarded(
+      onReward: () {
+        s.lucky.addReward();
+        s.lucky.draw();
+      },
+    );
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('광고를 아직 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')),
@@ -79,25 +57,26 @@ class _LuckyScreenState extends State<LuckyScreen> {
                     children: [
                       const Icon(Icons.auto_awesome, size: 40, color: kGold),
                       const SizedBox(height: 8),
-                      Text('오늘의 행운 번호',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                      Text(
+                        '오늘의 행운 번호',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('남은 뽑기 $credits회', style: TextStyle(color: scheme.onPrimaryContainer)),
+                      Text(
+                        credits > 0 ? '남은 무료 뽑기 $credits회' : '광고 1번 = 뽑기 1번',
+                        style: TextStyle(color: scheme.onPrimaryContainer),
+                      ),
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
                           onPressed: _draw,
                           icon: const Icon(Icons.casino_outlined),
-                          label: Text(credits > 0 ? '번호 뽑기' : '광고 보고 더 뽑기'),
+                          label: Text(credits > 0 ? '번호 뽑기' : '광고 보고 1번 더 뽑기'),
                         ),
                       ),
-                      if (credits > 0)
-                        TextButton.icon(
-                          onPressed: _watchAd,
-                          icon: const Icon(Icons.play_circle_outline, size: 18),
-                          label: Text('광고 보고 ${s.lucky.perRewardLabel} 충전'),
-                        ),
                     ],
                   ),
                 ),
@@ -116,13 +95,23 @@ class _LuckyScreenState extends State<LuckyScreen> {
                 for (var i = 0; i < sets.length; i++)
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       child: Row(
                         children: [
                           SizedBox(
                             width: 28,
-                            child: Text(String.fromCharCode(65 + (sets.length - 1 - i) % 26),
-                                style: TextStyle(fontWeight: FontWeight.w800, color: scheme.outline)),
+                            child: Text(
+                              String.fromCharCode(
+                                65 + (sets.length - 1 - i) % 26,
+                              ),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: scheme.outline,
+                              ),
+                            ),
                           ),
                           Expanded(
                             child: Row(
@@ -137,7 +126,9 @@ class _LuckyScreenState extends State<LuckyScreen> {
               const SizedBox(height: 16),
               Text(
                 '재미로 보는 무작위 번호입니다. 당첨을 보장하지 않으며, 복권 구매는 만 19세 이상만 가능합니다.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.outline),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.outline),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -154,12 +145,12 @@ class _Ball extends StatelessWidget {
   const _Ball(this.n);
 
   Color get _color => switch (n) {
-        <= 10 => const Color(0xFFFBC400),
-        <= 20 => const Color(0xFF69C8F2),
-        <= 30 => const Color(0xFFFF7272),
-        <= 40 => const Color(0xFFAAAAAA),
-        _ => const Color(0xFFB0D840),
-      };
+    <= 10 => const Color(0xFFFBC400),
+    <= 20 => const Color(0xFF69C8F2),
+    <= 30 => const Color(0xFFFF7272),
+    <= 40 => const Color(0xFFAAAAAA),
+    _ => const Color(0xFFB0D840),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -170,13 +161,26 @@ class _Ball extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: RadialGradient(
           center: const Alignment(-.3, -.4),
-          colors: [Color.lerp(_color, Colors.white, .35)!, _color, Color.lerp(_color, Colors.black, .2)!],
+          colors: [
+            Color.lerp(_color, Colors.white, .35)!,
+            _color,
+            Color.lerp(_color, Colors.black, .2)!,
+          ],
           stops: const [0, .6, 1],
         ),
-        boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26, offset: Offset(0, 1))],
+        boxShadow: const [
+          BoxShadow(blurRadius: 3, color: Colors.black26, offset: Offset(0, 1)),
+        ],
       ),
       alignment: Alignment.center,
-      child: Text('$n', style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 15)),
+      child: Text(
+        '$n',
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+          fontSize: 15,
+        ),
+      ),
     );
   }
 }

@@ -15,7 +15,7 @@ lib/
   models/store.dart               Store / Win 모델, 회차→추첨일 계산
   services/store_repository.dart  내장 JSON 로드(isolate) + 동행복권에서 새 회차 자동 갱신·캐시
   services/memo_service.dart      메모·즐겨찾기·평점·방문일·구매/당첨 금액 (SharedPreferences)
-  services/lucky_service.dart     행운 번호: 하루 1회 무료 + 보상형 광고로 충전
+  services/lucky_service.dart     행운 번호: 하루 1회 무료 + 보상형 광고 1번당 1회
   services/app_state.dart         1등만/1등 N회 이상/기간 필터, 탭, "지도에서 보기" 요청
   services/map_config.dart        타일 URL·초기 위치 (TILE_URL dart-define 으로 교체 가능)
   screens/home_shell.dart         탭 4개(지도·랭킹·내 메모·행운 번호) + 공통 배너
@@ -50,7 +50,7 @@ store/listing.md                  스토어 등록 문구·설정 값
 |---|---|---|
 | 모든 탭 하단·상세 하단 | 배너 | 항상 표시 |
 | 판매점 상세 진입 | 전면 | 3번째 진입마다 (`AdManager.interstitialEvery`) |
-| 행운 번호 탭 | 보상형 | 무료 1회 소진 후 "광고 보고 뽑기" → 3회 충전 |
+| 행운 번호 탭 | 보상형 | 무료 1회 소진 후 버튼 누르면 팝업 없이 바로 광고 → 광고 1번 = 뽑기 1번 (자동 뽑기) |
 
 ## 개발 빌드
 
