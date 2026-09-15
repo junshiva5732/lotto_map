@@ -101,7 +101,7 @@ flutter build appbundle --release --dart-define=TILE_URL=https://api.vworld.kr/r
 
 ### 4. iOS 출시 (Mac 필요)
 - [ ] Apple Developer Program, Xcode 팀 설정, `pod install`
-- [ ] `ios/Runner/Info.plist` 에 `NSLocationWhenInUseUsageDescription`, `GADApplicationIdentifier` 추가
+- [x] `ios/Runner/Info.plist` 에 `NSLocationWhenInUseUsageDescription`, `GADApplicationIdentifier`(테스트 ID) 추가 — 실제 ID 로 교체 필요
 - [ ] `flutter build ipa` → App Store Connect
 
 ### 5. 출시 후
