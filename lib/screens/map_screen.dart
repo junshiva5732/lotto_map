@@ -31,6 +31,16 @@ class _MapScreenState extends State<MapScreen> {
   Timer? _debounce;
   bool _mapReady = false;
 
+  // 검색
+  final _search = TextEditingController();
+  final _searchFocus = FocusNode();
+  Timer? _searchDebounce;
+  List<Store> _hits = const [];
+  String _query = '';
+
+  /// "모두 지도에 보기" 로 적용된 검색 결과. null 이면 필터 전체를 그린다.
+  List<Store>? _applied;
+
   AppServices get s => widget.services;
 
   @override
@@ -39,12 +49,17 @@ class _MapScreenState extends State<MapScreen> {
     s.state.addListener(_onStateChanged);
     s.repo.addListener(_recompute);
     s.memos.addListener(_rebuildMarkers);
+    _search.addListener(_onSearchChanged);
+    _searchFocus.addListener(() => setState(() {}));
     _recompute();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _searchDebounce?.cancel();
+    _search.dispose();
+    _searchFocus.dispose();
     s.state.removeListener(_onStateChanged);
     s.repo.removeListener(_recompute);
     s.memos.removeListener(_rebuildMarkers);
@@ -55,6 +70,12 @@ class _MapScreenState extends State<MapScreen> {
   void _onStateChanged() {
     _recompute();
     _consumeFocus();
+    if (_applied != null) {
+      _clearSearch(); // 필터가 바뀌면 검색 결과 표시 해제
+    } else if (_query.isNotEmpty) {
+      _query = '';
+      _runSearch();
+    }
   }
 
   /// 다른 탭에서 "지도에서 보기" 를 눌렀을 때
@@ -67,7 +88,9 @@ class _MapScreenState extends State<MapScreen> {
   /// 필터 통과 판매점 목록 갱신 (필터·데이터가 바뀔 때만)
   void _recompute() {
     final last = s.repo.lastRound;
-    _filtered = s.repo.stores.where((st) => s.state.passes(st, last)).toList(growable: false);
+    _filtered = s.repo.stores
+        .where((st) => s.state.passes(st, last))
+        .toList(growable: false);
     _rebuildMarkers();
   }
 
@@ -83,8 +106,14 @@ class _MapScreenState extends State<MapScreen> {
     final b = camera.visibleBounds;
     // 화면 밖 20% 여유
     final dLat = (b.north - b.south) * .2, dLng = (b.east - b.west) * .2;
-    final n = b.north + dLat, so = b.south - dLat, e = b.east + dLng, w = b.west - dLng;
-    final visible = _filtered.where((st) => st.lat <= n && st.lat >= so && st.lng <= e && st.lng >= w);
+    final n = b.north + dLat,
+        so = b.south - dLat,
+        e = b.east + dLng,
+        w = b.west - dLng;
+    final source = _applied ?? _filtered;
+    final visible = source.where(
+      (st) => st.lat <= n && st.lat >= so && st.lng <= e && st.lng >= w,
+    );
     final last = s.repo.lastRound;
     final minRound = s.state.minRound(last);
 
@@ -101,10 +130,16 @@ class _MapScreenState extends State<MapScreen> {
       for (final st in visible) {
         final x = (st.lng + 180) / 360 * scale;
         final latR = st.lat * math.pi / 180;
-        final y = (1 - math.log(math.tan(latR) + 1 / math.cos(latR)) / math.pi) / 2 * scale;
+        final y =
+            (1 - math.log(math.tan(latR) + 1 / math.cos(latR)) / math.pi) /
+            2 *
+            scale;
         final key = (x ~/ cell) * 1000003 + (y ~/ cell);
         final (f, sec) = st.countsSince(minRound);
-        (buckets[key] ??= _Cluster()).add(st, f + (s.state.firstOnly ? 0 : sec));
+        (buckets[key] ??= _Cluster()).add(
+          st,
+          f + (s.state.firstOnly ? 0 : sec),
+        );
       }
       for (final c in buckets.values) {
         if (c.stores.length == 1) {
@@ -150,13 +185,20 @@ class _MapScreenState extends State<MapScreen> {
       width: size,
       height: size,
       child: GestureDetector(
-        onTap: () => _map.move(c.center, math.min(zoom + 2.5, MapConfig.maxZoom)),
+        onTap:
+            () => _map.move(c.center, math.min(zoom + 2.5, MapConfig.maxZoom)),
         child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: scheme.primary.withValues(alpha: .88),
             border: Border.all(color: Colors.white, width: 2.5),
-            boxShadow: const [BoxShadow(blurRadius: 6, color: Colors.black38, offset: Offset(0, 2))],
+            boxShadow: const [
+              BoxShadow(
+                blurRadius: 6,
+                color: Colors.black38,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           alignment: Alignment.center,
           child: Text(
@@ -183,13 +225,18 @@ class _MapScreenState extends State<MapScreen> {
         return;
       }
       var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
-      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
         _toast('위치 권한이 없어 내 주변을 찾을 수 없습니다');
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
       ).timeout(const Duration(seconds: 12));
       _myLocation = LatLng(pos.latitude, pos.longitude);
       _map.move(_myLocation!, 14.5);
@@ -198,6 +245,80 @@ class _MapScreenState extends State<MapScreen> {
     } finally {
       if (mounted) setState(() => _locating = false);
     }
+  }
+
+  // ---------------------------------------------------------------- 검색
+
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 150), _runSearch);
+  }
+
+  void _runSearch() {
+    final q = _search.text.trim();
+    if (q == _query) return;
+    _query = q;
+    if (q.isEmpty) {
+      setState(() => _hits = const []);
+      return;
+    }
+    // 현재 필터(1등만·기간 등)를 통과한 판매점 중 상호/주소 일치. 없으면 전체에서.
+    var hits =
+        _filtered
+            .where((st) => st.name.contains(q) || st.addr.contains(q))
+            .toList();
+    if (hits.isEmpty) {
+      hits =
+          s.repo.stores
+              .where((st) => st.name.contains(q) || st.addr.contains(q))
+              .toList();
+    }
+    hits.sort((a, b) {
+      // 상호 일치 우선, 그다음 1등 횟수
+      final an = a.name.contains(q) ? 0 : 1, bn = b.name.contains(q) ? 0 : 1;
+      if (an != bn) return an - bn;
+      return b.firstCount.compareTo(a.firstCount);
+    });
+    setState(() => _hits = hits);
+  }
+
+  void _clearSearch() {
+    _search.clear();
+    _searchFocus.unfocus();
+    setState(() {
+      _hits = const [];
+      _query = '';
+      _applied = null;
+    });
+    _rebuildMarkers();
+  }
+
+  /// 검색 결과 전체가 보이도록 지도를 맞춘다 (지역 검색용).
+  void _fitHits() {
+    if (_hits.isEmpty) return;
+    _searchFocus.unfocus();
+    _applied = _hits; // 검색 결과만 지도에 표시
+    if (_hits.length == 1) {
+      _map.move(LatLng(_hits.first.lat, _hits.first.lng), 16.5);
+    } else {
+      final pts = _hits.take(2000).map((st) => LatLng(st.lat, st.lng)).toList();
+      _map.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints(pts),
+          padding: const EdgeInsets.fromLTRB(40, 200, 40, 80),
+          maxZoom: 16,
+        ),
+      );
+    }
+    _rebuildMarkers(); // 포커스 해제로 결과 목록 숨김 + 마커 갱신
+  }
+
+  void _goToHit(Store st) {
+    _searchFocus.unfocus();
+    _applied = null;
+    _map.move(LatLng(st.lat, st.lng), 16.5);
+    _rebuildMarkers();
+    _showStoreSheet(st);
   }
 
   void _toast(String msg) {
@@ -211,87 +332,112 @@ class _MapScreenState extends State<MapScreen> {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => ListenableBuilder(
-        listenable: s.memos,
-        builder: (ctx, _) {
-          final memo = s.memos.of(st.id);
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      builder:
+          (ctx) => ListenableBuilder(
+            listenable: s.memos,
+            builder: (ctx, _) {
+              final memo = s.memos.of(st.id);
+              return SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(st.name,
-                            style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              st.name,
+                              style: Theme.of(ctx).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              (memo?.favorite ?? false)
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: (memo?.favorite ?? false) ? kGold : null,
+                            ),
+                            onPressed: () => s.memos.toggleFavorite(st.id),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: Icon(
-                          (memo?.favorite ?? false) ? Icons.star : Icons.star_border,
-                          color: (memo?.favorite ?? false) ? kGold : null,
+                      const SizedBox(height: 4),
+                      Text(
+                        st.addr,
+                        style: TextStyle(
+                          color: Theme.of(ctx).colorScheme.outline,
                         ),
-                        onPressed: () => s.memos.toggleFavorite(st.id),
+                      ),
+                      const SizedBox(height: 10),
+                      WinBadges(first: st.firstCount, second: st.secondCount),
+                      if (st.lastFirstRound != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            '최근 1등: ${st.lastFirstRound}회',
+                            style: Theme.of(ctx).textTheme.bodySmall,
+                          ),
+                        ),
+                      if (memo != null && memo.text.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(
+                                  ctx,
+                                ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '📝 ${memo.text}',
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: () {
+                                Navigator.of(ctx).pop();
+                                StoreDetailScreen.open(context, s, st);
+                              },
+                              icon: const Icon(Icons.edit_note),
+                              label: Text(
+                                memo == null || memo.text.isEmpty
+                                    ? '상세 · 메모 쓰기'
+                                    : '상세 · 메모 수정',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.of(ctx).pop();
+                              openDirections(context, st);
+                            },
+                            onLongPress: () {
+                              Navigator.of(ctx).pop();
+                              openDirections(context, st, forcePicker: true);
+                            },
+                            icon: const Icon(Icons.directions),
+                            label: const Text('길찾기'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(st.addr, style: TextStyle(color: Theme.of(ctx).colorScheme.outline)),
-                  const SizedBox(height: 10),
-                  WinBadges(first: st.firstCount, second: st.secondCount),
-                  if (st.lastFirstRound != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text('최근 1등: ${st.lastFirstRound}회', style: Theme.of(ctx).textTheme.bodySmall),
-                    ),
-                  if (memo != null && memo.text.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text('📝 ${memo.text}', maxLines: 3, overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            StoreDetailScreen.open(context, s, st);
-                          },
-                          icon: const Icon(Icons.edit_note),
-                          label: Text(memo == null || memo.text.isEmpty ? '상세 · 메모 쓰기' : '상세 · 메모 수정'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          openDirections(context, st);
-                        },
-                        onLongPress: () {
-                          Navigator.of(ctx).pop();
-                          openDirections(context, st, forcePicker: true);
-                        },
-                        icon: const Icon(Icons.directions),
-                        label: const Text('길찾기'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+                ),
+              );
+            },
+          ),
     );
   }
 
@@ -309,7 +455,9 @@ class _MapScreenState extends State<MapScreen> {
             initialZoom: MapConfig.initialZoom,
             minZoom: MapConfig.minZoom,
             maxZoom: MapConfig.maxZoom,
-            interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+            interactionOptions: const InteractionOptions(
+              flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+            ),
             onMapReady: () {
               _mapReady = true;
               _rebuildMarkers();
@@ -324,26 +472,45 @@ class _MapScreenState extends State<MapScreen> {
               maxNativeZoom: 19,
             ),
             if (_myLocation != null)
-              MarkerLayer(markers: [
-                Marker(
-                  point: _myLocation!,
-                  width: 22,
-                  height: 22,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.blueAccent,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: const [BoxShadow(blurRadius: 6, color: Colors.black38)],
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _myLocation!,
+                    width: 22,
+                    height: 22,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blueAccent,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: const [
+                          BoxShadow(blurRadius: 6, color: Colors.black38),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             MarkerLayer(markers: _markers),
+            // 지도 출처 표기 (브이월드 약관상 필수). flutter_map 기본 위젯 대신 작게.
             if (MapConfig.attribution.isNotEmpty)
-              SimpleAttributionWidget(
-                source: Text(MapConfig.attribution, style: const TextStyle(fontSize: 10)),
+              Align(
                 alignment: Alignment.bottomLeft,
+                child: Container(
+                  margin: const EdgeInsets.only(left: 6, bottom: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '© ${MapConfig.attribution}',
+                    style: const TextStyle(fontSize: 10, color: Colors.black87),
+                  ),
+                ),
               ),
           ],
         ),
@@ -364,29 +531,148 @@ class _MapScreenState extends State<MapScreen> {
                     elevation: 3,
                     borderRadius: BorderRadius.circular(999),
                     color: scheme.surface,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      child: ListenableBuilder(
-                        listenable: s.repo,
-                        builder: (_, _) => Row(
-                          children: [
-                            const Icon(Icons.location_on, color: kGold, size: 20),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                '명당 ${_filtered.length}곳 · ${s.repo.lastRound}회 기준',
-                                style: const TextStyle(fontWeight: FontWeight.w700),
+                    child: ListenableBuilder(
+                      listenable: s.repo,
+                      builder:
+                          (_, _) => TextField(
+                            controller: _search,
+                            focusNode: _searchFocus,
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: (_) => _fitHits(),
+                            decoration: InputDecoration(
+                              hintText:
+                                  '지역·상호 검색  (명당 ${_filtered.length}곳 · ${s.repo.lastRound}회)',
+                              hintStyle: const TextStyle(fontSize: 14),
+                              prefixIcon: const Icon(Icons.search),
+                              suffixIcon:
+                                  _query.isNotEmpty || _searchFocus.hasFocus
+                                      ? IconButton(
+                                        icon: const Icon(Icons.close),
+                                        onPressed: _clearSearch,
+                                      )
+                                      : (s.repo.refreshing
+                                          ? const Padding(
+                                            padding: EdgeInsets.all(14),
+                                            child: SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                          )
+                                          : null),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
                               ),
                             ),
-                            if (s.repo.refreshing)
-                              const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
-                          ],
-                        ),
-                      ),
+                          ),
                     ),
                   ),
                 ),
-                Material(color: Colors.transparent, child: FilterBar(state: s.state)),
+                Material(
+                  color: Colors.transparent,
+                  child: FilterBar(state: s.state),
+                ),
+                if (_applied != null && !_searchFocus.hasFocus)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 2),
+                    child: Chip(
+                      avatar: const Icon(Icons.search, size: 16),
+                      label: Text("'$_query' 결과 ${_applied!.length}곳만 표시 중"),
+                      onDeleted: _clearSearch,
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                if (_query.isNotEmpty && _searchFocus.hasFocus)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(16),
+                      color: scheme.surface,
+                      clipBehavior: Clip.antiAlias,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.sizeOf(context).height * .45,
+                        ),
+                        child:
+                            _hits.isEmpty
+                                ? const Padding(
+                                  padding: EdgeInsets.all(20),
+                                  child: Text('일치하는 판매점이 없습니다'),
+                                )
+                                : ListView(
+                                  shrinkWrap: true,
+                                  padding: EdgeInsets.zero,
+                                  children: [
+                                    if (_hits.length > 1)
+                                      ListTile(
+                                        dense: true,
+                                        leading: Icon(
+                                          Icons.zoom_out_map,
+                                          color: scheme.primary,
+                                        ),
+                                        title: Text(
+                                          "'$_query' 일치 ${_hits.length}곳 모두 지도에 보기",
+                                          style: TextStyle(
+                                            color: scheme.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        onTap: _fitHits,
+                                      ),
+                                    for (final st in _hits.take(30))
+                                      ListTile(
+                                        dense: true,
+                                        leading: CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor:
+                                              st.firstCount > 0
+                                                  ? kGold
+                                                  : kSilver,
+                                          child: Text(
+                                            '${st.firstCount}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                        ),
+                                        title: Text(
+                                          st.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        subtitle: Text(
+                                          st.addr,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        onTap: () => _goToHit(st),
+                                      ),
+                                    if (_hits.length > 30)
+                                      Padding(
+                                        padding: const EdgeInsets.all(10),
+                                        child: Text(
+                                          '외 ${_hits.length - 30}곳 — 더 구체적으로 검색하거나 "모두 지도에 보기"',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: scheme.outline,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -399,9 +685,14 @@ class _MapScreenState extends State<MapScreen> {
           child: FloatingActionButton.small(
             heroTag: 'myloc',
             onPressed: _goMyLocation,
-            child: _locating
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.my_location),
+            child:
+                _locating
+                    ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : const Icon(Icons.my_location),
           ),
         ),
       ],
@@ -452,17 +743,43 @@ class _Pin extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: closed ? color.withValues(alpha: .45) : color,
-            border: Border.all(color: favorite ? Colors.redAccent : Colors.white, width: favorite ? 3 : 2),
-            boxShadow: const [BoxShadow(blurRadius: 5, color: Colors.black38, offset: Offset(0, 2))],
+            border: Border.all(
+              color: favorite ? Colors.redAccent : Colors.white,
+              width: favorite ? 3 : 2,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                blurRadius: 5,
+                color: Colors.black38,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           alignment: Alignment.center,
-          child: secondOnly
-              ? const Text('2등', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.black87))
-              : Text(label,
-                  style: TextStyle(fontSize: size * .42, fontWeight: FontWeight.w900, color: Colors.black87)),
+          child:
+              secondOnly
+                  ? const Text(
+                    '2등',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                  )
+                  : Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: size * .42,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black87,
+                    ),
+                  ),
         ),
         // 아래쪽 꼬리
-        CustomPaint(size: const Size(10, 6), painter: _TailPainter(closed ? color.withValues(alpha: .45) : color)),
+        CustomPaint(
+          size: const Size(10, 6),
+          painter: _TailPainter(closed ? color.withValues(alpha: .45) : color),
+        ),
       ],
     );
   }
@@ -474,11 +791,12 @@ class _TailPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final p = ui.Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width / 2, size.height)
-      ..close();
+    final p =
+        ui.Path()
+          ..moveTo(0, 0)
+          ..lineTo(size.width, 0)
+          ..lineTo(size.width / 2, size.height)
+          ..close();
     canvas.drawPath(p, Paint()..color = color);
   }
 

@@ -18,13 +18,19 @@ import '../widgets/store_widgets.dart';
 class StoreDetailScreen extends StatefulWidget {
   final AppServices services;
   final Store store;
-  const StoreDetailScreen({super.key, required this.services, required this.store});
+  const StoreDetailScreen({
+    super.key,
+    required this.services,
+    required this.store,
+  });
 
   static void open(BuildContext context, AppServices services, Store store) {
     AdManager.instance.onOpenDetailThen(() {
       if (!context.mounted) return;
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => StoreDetailScreen(services: services, store: store)),
+        MaterialPageRoute(
+          builder: (_) => StoreDetailScreen(services: services, store: store),
+        ),
       );
     });
   }
@@ -40,7 +46,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   MemoService get _memos => widget.services.memos;
   Store get store => widget.store;
   StoreMemo get memo =>
-      _memos.of(store.id) ?? StoreMemo(storeId: store.id, updatedAt: DateTime.now());
+      _memos.of(store.id) ??
+      StoreMemo(storeId: store.id, updatedAt: DateTime.now());
 
   @override
   void initState() {
@@ -73,7 +80,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     _memos.save(memo.copyWith(text: _text.text));
   }
 
-  Future<void> _openMap({bool pick = false}) => openDirections(context, store, forcePicker: pick);
+  Future<void> _openMap({bool pick = false}) =>
+      openDirections(context, store, forcePicker: pick);
 
   Future<void> _call() async {
     final tel = store.tel;
@@ -104,7 +112,10 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
         actions: [
           IconButton(
             tooltip: m.favorite ? '즐겨찾기 해제' : '즐겨찾기',
-            icon: Icon(m.favorite ? Icons.star : Icons.star_border, color: m.favorite ? kGold : null),
+            icon: Icon(
+              m.favorite ? Icons.star : Icons.star_border,
+              color: m.favorite ? kGold : null,
+            ),
             onPressed: () => _memos.toggleFavorite(store.id),
           ),
         ],
@@ -119,9 +130,14 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                 WinBadges(first: store.firstCount, second: store.secondCount),
                 const SizedBox(height: 12),
                 _InfoRow(icon: Icons.place_outlined, text: store.addr),
-                if (store.tel != null) _InfoRow(icon: Icons.phone_outlined, text: store.tel!),
+                if (store.tel != null)
+                  _InfoRow(icon: Icons.phone_outlined, text: store.tel!),
                 if (store.isClosed)
-                  _InfoRow(icon: Icons.storefront_outlined, text: '현재 ${store.status} 상태입니다', color: scheme.error),
+                  _InfoRow(
+                    icon: Icons.storefront_outlined,
+                    text: '현재 ${store.status} 상태입니다',
+                    color: scheme.error,
+                  ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -148,7 +164,9 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                       child: OutlinedButton.icon(
                         style: _tight,
                         onPressed: () {
-                          widget.services.state.focusOnMap(LatLng(store.lat, store.lng));
+                          widget.services.state.focusOnMap(
+                            LatLng(store.lat, store.lng),
+                          );
                           Navigator.of(context).popUntil((r) => r.isFirst);
                         },
                         icon: const Icon(Icons.map_outlined),
@@ -175,10 +193,20 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                               IconButton(
                                 visualDensity: VisualDensity.compact,
                                 padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                icon: Icon(i <= m.rating ? Icons.star : Icons.star_border,
-                                    color: i <= m.rating ? kGold : scheme.outline),
-                                onPressed: () => _memos.save(m.copyWith(rating: m.rating == i ? 0 : i)),
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                icon: Icon(
+                                  i <= m.rating
+                                      ? Icons.star
+                                      : Icons.star_border,
+                                  color: i <= m.rating ? kGold : scheme.outline,
+                                ),
+                                onPressed:
+                                    () => _memos.save(
+                                      m.copyWith(rating: m.rating == i ? 0 : i),
+                                    ),
                               ),
                           ],
                         ),
@@ -188,13 +216,29 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                             TextButton.icon(
                               onPressed: _pickVisited,
                               icon: const Icon(Icons.event, size: 18),
-                              label: Text(m.visitedAt == null ? '기록하기' : df.format(m.visitedAt!)),
+                              label: Text(
+                                m.visitedAt == null
+                                    ? '날짜 선택'
+                                    : df.format(m.visitedAt!),
+                              ),
                             ),
+                            if (m.visitedAt == null)
+                              FilledButton.tonal(
+                                style: _tight,
+                                onPressed:
+                                    () => _memos.save(
+                                      m.copyWith(visitedAt: DateTime.now()),
+                                    ),
+                                child: const Text('오늘 방문'),
+                              ),
                             if (m.visitedAt != null)
                               IconButton(
                                 tooltip: '방문일 지우기',
                                 icon: const Icon(Icons.close, size: 18),
-                                onPressed: () => _memos.save(m.copyWith(clearVisited: true)),
+                                onPressed:
+                                    () => _memos.save(
+                                      m.copyWith(clearVisited: true),
+                                    ),
                               ),
                           ],
                         ),
@@ -204,7 +248,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           minLines: 3,
                           textInputAction: TextInputAction.newline,
                           decoration: const InputDecoration(
-                            hintText: '예) 주차 가능, 사장님 친절, 토요일 오후 줄 김…\n(자동 저장, 이 기기에만 저장됩니다)',
+                            hintText:
+                                '예) 주차 가능, 사장님 친절, 토요일 오후 줄 김…\n(자동 저장, 이 기기에만 저장됩니다)',
                             border: OutlineInputBorder(),
                           ),
                         ),
@@ -215,7 +260,10 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
 
                 // ── 당첨 이력
                 const SizedBox(height: 24),
-                Text('당첨 이력 (${wins.length}건)', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  '당첨 이력 (${wins.length}건)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 for (final w in wins)
                   ListTile(
@@ -224,17 +272,31 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     leading: CircleAvatar(
                       radius: 14,
                       backgroundColor: w.rank == 1 ? kGold : kSilver,
-                      child: Text('${w.rank}',
-                          style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black87, fontSize: 13)),
+                      child: Text(
+                        '${w.rank}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                     title: Text('${w.round}회  ${w.rank}등'),
                     subtitle: Text(df.format(w.date)),
-                    trailing: w.modeLabel.isEmpty ? null : Text(w.modeLabel, style: TextStyle(color: scheme.outline)),
+                    trailing:
+                        w.modeLabel.isEmpty
+                            ? null
+                            : Text(
+                              w.modeLabel,
+                              style: TextStyle(color: scheme.outline),
+                            ),
                   ),
                 const SizedBox(height: 8),
                 Text(
                   '출처: 동행복권 당첨 판매점 조회 (262회 이후). 상호·주소는 최근 당첨 시점 기준이며 실제와 다를 수 있습니다.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.outline),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: scheme.outline),
                 ),
               ],
             ),
@@ -247,7 +309,9 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
 }
 
 /// 작은 화면에서 버튼 3개가 한 줄에 들어가도록 좌우 패딩을 줄인다.
-final _tight = ButtonStyle(padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 8)));
+final _tight = ButtonStyle(
+  padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 8)),
+);
 
 class _InfoRow extends StatelessWidget {
   final IconData icon;
@@ -262,7 +326,11 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: color ?? Theme.of(context).colorScheme.outline),
+          Icon(
+            icon,
+            size: 18,
+            color: color ?? Theme.of(context).colorScheme.outline,
+          ),
           const SizedBox(width: 8),
           Expanded(child: SelectableText(text, style: TextStyle(color: color))),
         ],

@@ -7,14 +7,23 @@ import '../widgets/store_widgets.dart';
 import 'settings_screen.dart';
 import 'store_detail_screen.dart';
 
-/// 즐겨찾기·메모가 있는 판매점 목록
-class MemoListScreen extends StatelessWidget {
+enum _Seg { all, visited, favorite }
+
+/// 즐겨찾기·메모가 있는 판매점 목록. 방문일을 기록한 곳은 "방문" 탭에 따로 모아 보여준다.
+class MemoListScreen extends StatefulWidget {
   final AppServices services;
   const MemoListScreen({super.key, required this.services});
 
   @override
+  State<MemoListScreen> createState() => _MemoListScreenState();
+}
+
+class _MemoListScreenState extends State<MemoListScreen> {
+  _Seg _seg = _Seg.all;
+
+  @override
   Widget build(BuildContext context) {
-    final s = services;
+    final s = widget.services;
     final df = DateFormat('yyyy.MM.dd');
     return Scaffold(
       appBar: AppBar(
@@ -23,90 +32,242 @@ class MemoListScreen extends StatelessWidget {
           IconButton(
             tooltip: '설정·정보',
             icon: const Icon(Icons.info_outline),
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => SettingsScreen(services: s))),
+            onPressed:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SettingsScreen(services: s),
+                  ),
+                ),
           ),
         ],
       ),
       body: ListenableBuilder(
         listenable: Listenable.merge([s.memos, s.repo]),
         builder: (context, _) {
-          final memos = s.memos.all;
-          if (memos.isEmpty) {
+          final all = s.memos.all;
+          final visitedAll =
+              all.where((m) => m.visitedAt != null).toList()
+                ..sort((a, b) => b.visitedAt!.compareTo(a.visitedAt!));
+          final memos = switch (_seg) {
+            _Seg.all => all,
+            _Seg.visited => visitedAll,
+            _Seg.favorite => all.where((m) => m.favorite).toList(),
+          };
+
+          final segBar = Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<_Seg>(
+                showSelectedIcon: false,
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  padding: WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                ),
+                segments: [
+                  ButtonSegment(
+                    value: _Seg.all,
+                    label: Text('전체 ${all.length}'),
+                  ),
+                  ButtonSegment(
+                    value: _Seg.visited,
+                    label: Text('방문 ${visitedAll.length}'),
+                  ),
+                  ButtonSegment(
+                    value: _Seg.favorite,
+                    label: Text('즐겨찾기 ${all.where((m) => m.favorite).length}'),
+                  ),
+                ],
+                selected: {_seg},
+                onSelectionChanged: (v) => setState(() => _seg = v.first),
+              ),
+            ),
+          );
+
+          if (all.isEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.bookmark_add_outlined, size: 56, color: Theme.of(context).colorScheme.outline),
+                    Icon(
+                      Icons.bookmark_add_outlined,
+                      size: 56,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
                     const SizedBox(height: 12),
-                    const Text('아직 저장한 명당이 없습니다', style: TextStyle(fontWeight: FontWeight.w700)),
+                    const Text(
+                      '아직 저장한 명당이 없습니다',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       '지도나 랭킹에서 판매점을 열고 ★ 즐겨찾기 또는 메모를 남겨 보세요.\n메모는 이 기기에만 저장됩니다.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                   ],
                 ),
               ),
             );
           }
-          return ListView.builder(
-            itemCount: memos.length,
-            itemBuilder: (context, i) {
-              final m = memos[i];
-              final st = s.repo.byId(m.storeId);
-              if (st == null) return const SizedBox.shrink();
-              return Dismissible(
-                key: ValueKey(m.storeId),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 24),
-                  child: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.onErrorContainer),
-                ),
-                confirmDismiss: (_) async =>
-                    await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('메모 삭제'),
-                        content: Text('${st.name} 의 메모와 즐겨찾기를 지울까요?'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
-                          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('삭제')),
-                        ],
-                      ),
-                    ) ??
-                    false,
-                onDismissed: (_) => s.memos.remove(m.storeId),
-                child: StoreTile(
-                  store: st,
-                  minRound: 0,
-                  favorite: m.favorite,
-                  hasMemo: m.text.isNotEmpty,
-                  subtitleExtra: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (m.rating > 0 || m.visitedAt != null)
-                        Text(
-                          [
-                            if (m.rating > 0) '★' * m.rating,
-                            if (m.visitedAt != null) '방문 ${df.format(m.visitedAt!)}',
-                          ].join('  '),
-                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline),
+          return Column(
+            children: [
+              segBar,
+              if (_seg == _Seg.visited && memos.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        '아직 방문 기록이 없습니다.\n판매점 상세의 "방문일 → 오늘 방문" 을 눌러 다녀온 명당을 남겨 보세요.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.outline,
                         ),
-                      if (m.text.isNotEmpty)
-                        Text(m.text, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-                    ],
+                      ),
+                    ),
                   ),
-                  onTap: () => StoreDetailScreen.open(context, s, st),
-                  onMapTap: () => s.state.focusOnMap(LatLng(st.lat, st.lng)),
+                )
+              else if (memos.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      '즐겨찾기한 명당이 없습니다',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: memos.length,
+                    itemBuilder: (context, i) {
+                      final m = memos[i];
+                      final st = s.repo.byId(m.storeId);
+                      if (st == null) return const SizedBox.shrink();
+                      return Dismissible(
+                        key: ValueKey(m.storeId),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          color: Theme.of(context).colorScheme.errorContainer,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 24),
+                          child: Icon(
+                            Icons.delete_outline,
+                            color:
+                                Theme.of(context).colorScheme.onErrorContainer,
+                          ),
+                        ),
+                        confirmDismiss:
+                            (_) async =>
+                                await showDialog<bool>(
+                                  context: context,
+                                  builder:
+                                      (ctx) => AlertDialog(
+                                        title: const Text('메모 삭제'),
+                                        content: Text(
+                                          '${st.name} 의 메모와 즐겨찾기를 지울까요?',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed:
+                                                () => Navigator.pop(ctx, false),
+                                            child: const Text('취소'),
+                                          ),
+                                          FilledButton(
+                                            onPressed:
+                                                () => Navigator.pop(ctx, true),
+                                            child: const Text('삭제'),
+                                          ),
+                                        ],
+                                      ),
+                                ) ??
+                                false,
+                        onDismissed: (_) => s.memos.remove(m.storeId),
+                        child: StoreTile(
+                          store: st,
+                          minRound: 0,
+                          favorite: m.favorite,
+                          hasMemo: m.text.isNotEmpty,
+                          subtitleExtra: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (m.visitedAt != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.flag,
+                                        size: 14,
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${df.format(m.visitedAt!)} 방문',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                        ),
+                                      ),
+                                      if (m.rating > 0) ...[
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '★' * m.rating,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color:
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.outline,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                )
+                              else if (m.rating > 0)
+                                Text(
+                                  '★' * m.rating,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        Theme.of(context).colorScheme.outline,
+                                  ),
+                                ),
+                              if (m.text.isNotEmpty)
+                                Text(
+                                  m.text,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                            ],
+                          ),
+                          onTap: () => StoreDetailScreen.open(context, s, st),
+                          onMapTap:
+                              () => s.state.focusOnMap(LatLng(st.lat, st.lng)),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              );
-            },
+            ],
           );
         },
       ),

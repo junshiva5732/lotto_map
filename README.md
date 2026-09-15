@@ -16,12 +16,12 @@ lib/
   services/store_repository.dart  내장 JSON 로드(isolate) + 동행복권에서 새 회차 자동 갱신·캐시
   services/memo_service.dart      메모·즐겨찾기·평점·방문일 (SharedPreferences)
   services/lucky_service.dart     행운 번호: 하루 1회 무료 + 보상형 광고로 충전
-  services/app_state.dart         1등만/기간 필터, 탭, "지도에서 보기" 요청
+  services/app_state.dart         1등만/1등 N회 이상/기간 필터, 탭, "지도에서 보기" 요청
   services/map_config.dart        타일 URL·초기 위치 (TILE_URL dart-define 으로 교체 가능)
   screens/home_shell.dart         탭 4개(지도·랭킹·내 메모·행운 번호) + 공통 배너
-  screens/map_screen.dart         flutter_map + 격자 클러스터링 + 내 위치 + 마커 바텀시트
+  screens/map_screen.dart         flutter_map + 격자 클러스터링 + 지역·상호 검색(결과만 표시) + 내 위치 + 마커 바텀시트
   screens/ranking_screen.dart     1등 횟수 랭킹, 검색, 시·도 필터
-  screens/memo_list_screen.dart   내 메모 목록 (스와이프 삭제)
+  screens/memo_list_screen.dart   내 메모 목록: 전체/방문(방문일 기록순)/즐겨찾기 세그먼트, 스와이프 삭제
   screens/store_detail_screen.dart 상세: 정보·길찾기·전화·메모(자동 저장)·당첨 이력
   services/navigation_apps.dart   길찾기 앱 선택(네이버/카카오/T맵/구글/기타), 기본 앱 기억, 미설치 시 웹·스토어 폴백
   screens/lucky_screen.dart       행운 번호 뽑기
