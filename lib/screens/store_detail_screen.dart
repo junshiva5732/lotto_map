@@ -71,6 +71,14 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     _moneyDebounce = Timer(const Duration(milliseconds: 600), _saveMoney);
   }
 
+  /// 평점·방문일처럼 즉시 저장하는 변경 전에, 입력 중인 텍스트/금액을 먼저 반영한다.
+  void _flushPending() {
+    _debounce?.cancel();
+    _moneyDebounce?.cancel();
+    _saveText();
+    _saveMoney();
+  }
+
   void _saveMoney() {
     final spent =
         int.tryParse(_spent.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
@@ -123,7 +131,10 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
       firstDate: DateTime(2002, 12, 7),
       lastDate: DateTime.now(),
     );
-    if (picked != null) _memos.save(memo.copyWith(visitedAt: picked));
+    if (picked != null) {
+      _flushPending();
+      _memos.save(memo.copyWith(visitedAt: picked));
+    }
   }
 
   @override
@@ -230,10 +241,14 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                       : Icons.star_border,
                                   color: i <= m.rating ? kGold : scheme.outline,
                                 ),
-                                onPressed:
-                                    () => _memos.save(
-                                      m.copyWith(rating: m.rating == i ? 0 : i),
+                                onPressed: () {
+                                  _flushPending();
+                                  _memos.save(
+                                    memo.copyWith(
+                                      rating: m.rating == i ? 0 : i,
                                     ),
+                                  );
+                                },
                               ),
                           ],
                         ),
@@ -252,20 +267,24 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                             if (m.visitedAt == null)
                               FilledButton.tonal(
                                 style: _tight,
-                                onPressed:
-                                    () => _memos.save(
-                                      m.copyWith(visitedAt: DateTime.now()),
-                                    ),
+                                onPressed: () {
+                                  _flushPending();
+                                  _memos.save(
+                                    memo.copyWith(visitedAt: DateTime.now()),
+                                  );
+                                },
                                 child: const Text('오늘 방문'),
                               ),
                             if (m.visitedAt != null)
                               IconButton(
                                 tooltip: '방문일 지우기',
                                 icon: const Icon(Icons.close, size: 18),
-                                onPressed:
-                                    () => _memos.save(
-                                      m.copyWith(clearVisited: true),
-                                    ),
+                                onPressed: () {
+                                  _flushPending();
+                                  _memos.save(
+                                    memo.copyWith(clearVisited: true),
+                                  );
+                                },
                               ),
                           ],
                         ),
