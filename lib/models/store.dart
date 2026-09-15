@@ -85,7 +85,7 @@ class Store {
 
   int get firstCount => wins.where((w) => w.rank == 1).length;
   int get secondCount => wins.where((w) => w.rank == 2).length;
-  bool get isClosed => status.contains('폐업');
+  bool get isClosed => status.contains('폐'); // 폐점 / 폐업
 
   /// 가장 최근 1등 회차 (없으면 null)
   int? get lastFirstRound {

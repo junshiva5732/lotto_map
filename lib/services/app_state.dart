@@ -18,6 +18,7 @@ enum Period {
 /// 지도·랭킹 탭이 공유하는 필터와 탭 전환 요청.
 class AppState extends ChangeNotifier {
   bool _firstOnly = true;
+  bool _showClosed = false;
   Period _period = Period.all;
   int _tab = 0;
   LatLng? _pendingFocus;
@@ -26,6 +27,15 @@ class AppState extends ChangeNotifier {
   bool get firstOnly => _firstOnly;
   Period get period => _period;
   int get tab => _tab;
+
+  /// 폐점한 판매점도 표시
+  bool get showClosed => _showClosed;
+
+  set showClosed(bool v) {
+    if (v == _showClosed) return;
+    _showClosed = v;
+    notifyListeners();
+  }
 
   set firstOnly(bool v) {
     if (v == _firstOnly) return;
@@ -62,6 +72,7 @@ class AppState extends ChangeNotifier {
 
   /// 현재 필터를 통과하는 판매점인지. [lastRound] 는 데이터의 마지막 회차.
   bool passes(Store s, int lastRound) {
+    if (!_showClosed && s.isClosed) return false;
     final (first, second) = s.countsSince(minRound(lastRound));
     return _firstOnly ? first > 0 : (first + second) > 0;
   }

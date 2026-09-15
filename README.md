@@ -35,6 +35,8 @@ store/listing.md                  스토어 등록 문구·설정 값
 
 ## 데이터
 
+- 현재 내장: 262~1241회 (2026-09-15 수집), 판매점 10,547곳 (1등 배출점 4,589곳, 영업 중 3,267곳), 2.9MB
+
 - 출처: 동행복권 `wnprchsplcsrch/selectLtWnShp.do` (당첨 판매점 조회 화면이 쓰는 JSON, 좌표 포함). 262회부터 데이터가 있다.
 - 갱신: `python tool/fetch_stores.py` → `assets/data/stores.json` 재생성 후 앱 업데이트.
   회차별 원본은 `tool/cache/` 에 캐시되어 실패한 회차만 다시 받는다. 사이트가 요청을 막으면(연결 타임아웃) 잠시 후 재실행.
@@ -94,8 +96,8 @@ flutter build appbundle --release --dart-define=TILE_URL=https://api.vworld.kr/r
 - [x] 앱 아이콘: `tool/make_icon.py` → `dart run flutter_launcher_icons`
 - [x] 위치 권한: 선택 사용. Play 데이터 보안 양식 작성 시 `store/listing.md` 참고
 - [ ] (권장) 지도 타일을 키 발급형으로 교체 (위 "지도 타일")
-- [ ] `flutter build appbundle --release` → `.aab` 업로드
-- [ ] 스토어 등록 정보: `store/listing.md`, `store/icon-512.png`, `store/feature-graphic.png`, `store/screenshots/`
+- [x] `flutter build appbundle --release` → `build/app/outputs/bundle/release/app-release.aab` (업로드는 Play Console 에서)
+- [x] 스토어 등록 정보: `store/listing.md`, `store/icon-512.png`, `store/feature-graphic.png`, `store/screenshots/01~06.png`
 
 ### 4. iOS 출시 (Mac 필요)
 - [ ] Apple Developer Program, Xcode 팀 설정, `pod install`

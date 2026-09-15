@@ -65,9 +65,9 @@ shadow(fg, (isz, isz), ipos, 64)
 fg.paste(ic, ipos, rounded_mask((isz, isz), 64))
 
 d = ImageDraw.Draw(fg)
-tx = 450
-d.text((tx, 125), "로또 명당 지도", font=font(FONT_BOLD, 84), fill=CREAM)
-d.text((tx + 4, 245), "전국 1등 배출점을 지도에서 한눈에", font=font(FONT_REG, 36), fill=(255, 226, 220))
+tx = 430
+d.text((tx, 130), "로또 명당 지도", font=font(FONT_BOLD, 74), fill=CREAM)
+d.text((tx + 4, 240), "전국 1등 배출점을 지도에서 한눈에", font=font(FONT_REG, 34), fill=(255, 226, 220))
 d.text((tx + 4, 305), "당첨 이력 · 명당 랭킹 · 내 메모 · 행운 번호", font=font(FONT_REG, 27), fill=(255, 200, 190))
 fg.convert("RGB").save(os.path.join(STORE, "feature-graphic.png"))
 
@@ -78,6 +78,7 @@ shots = [
     ("s_sheet.png", "핀을 누르면 바로", "당첨 이력과 정보"),
     ("s_ranking.png", "1등 횟수 랭킹과", "지역·기간 필터"),
     ("s_detail.png", "다녀온 명당에", "나만의 메모와 평점"),
+    ("s_memo.png", "내가 저장한 명당", "한곳에 모아보기"),
     ("s_lucky.png", "오늘의 행운 번호도", "재미로 한 번"),
 ]
 n = 0

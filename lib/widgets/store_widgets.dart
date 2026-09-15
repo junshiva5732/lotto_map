@@ -98,7 +98,7 @@ class StoreTile extends StatelessWidget {
           if (store.isClosed)
             Padding(
               padding: const EdgeInsets.only(left: 6),
-              child: Text('폐업', style: TextStyle(fontSize: 11, color: scheme.error)),
+              child: Text('폐점', style: TextStyle(fontSize: 11, color: scheme.error)),
             ),
           if (favorite) const Padding(padding: EdgeInsets.only(left: 4), child: Icon(Icons.star, size: 16, color: kGold)),
           if (hasMemo)
@@ -147,6 +147,12 @@ class FilterBar extends StatelessWidget {
               selected: state.firstOnly,
               onSelected: (v) => state.firstOnly = v,
               avatar: state.firstOnly ? null : const Icon(Icons.filter_alt_outlined, size: 16),
+            ),
+            const SizedBox(width: 8),
+            FilterChip(
+              label: const Text('폐점 포함'),
+              selected: state.showClosed,
+              onSelected: (v) => state.showClosed = v,
             ),
             const SizedBox(width: 8),
             for (final p in Period.values) ...[

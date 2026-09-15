@@ -73,9 +73,9 @@ Play Console → 앱 → **스토어 등록정보(기본)** 에 아래 내용을
 |---|---|---|
 | 앱 아이콘 | `store/icon-512.png` | 512×512 PNG |
 | 그래픽 이미지(피처 그래픽) | `store/feature-graphic.png` | 1024×500 PNG |
-| 휴대전화 스크린샷 | `store/screenshots/01.png` ~ `05.png` | 1080×1920 PNG (9:16) |
+| 휴대전화 스크린샷 | `store/screenshots/01.png` ~ `06.png` | 1080×1920 PNG (9:16) |
 
-스크린샷은 순서대로 업로드 (01 → 05). 태블릿 스크린샷은 필수가 아니므로 생략 가능.
+스크린샷은 순서대로 업로드 (01 → 06). 태블릿 스크린샷은 필수가 아니므로 생략 가능.
 이미지를 다시 만들려면: `python tool/make_store_assets.py` (입력: `store/raw/*.png`)
 
 ---

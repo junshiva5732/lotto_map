@@ -205,15 +205,21 @@ class StoreRepository extends ChangeNotifier {
           'S' => 'semi',
           _ => null,
         };
+        // 폐점 판매점은 shpAddr 이 비어 있어 befAddr(당첨 당시 주소)을 쓴다 (tool/fetch_stores.py 와 동일)
+        var addr = (row['shpAddr'] as String? ?? '').trim();
+        if (addr.isEmpty || addr.length < 6) addr = (row['befAddr'] as String? ?? '').trim();
+        var region = (row['region'] as String? ?? '').trim();
+        if (region == '전남' || region == '광주') region = '전남광주';
+        if (region.isEmpty && addr.isNotEmpty) region = addr.split(' ').first;
         out.add(Store(
           id: id,
           name: (row['shpNm'] as String? ?? '').trim(),
-          addr: (row['shpAddr'] as String? ?? '').trim(),
+          addr: addr,
           tel: row['shpTelno'] as String?,
           lat: lat.toDouble(),
           lng: lng.toDouble(),
-          region: row['region'] as String? ?? '',
-          status: row['status'] as String? ?? '',
+          region: region,
+          status: (row['status'] as String? ?? '').trim(),
           wins: [Win(round: round, rank: (row['wnShpRnk'] as num?)?.toInt() ?? 0, mode: mode)],
         ));
       }
