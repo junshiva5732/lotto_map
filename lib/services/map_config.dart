@@ -20,7 +20,14 @@ class MapConfig {
   /// 타일 요청에 실리는 User-Agent (OSM 정책상 앱 식별 필수)
   static const userAgentPackage = 'com.jun5731.lotto_map';
 
-  static String get attribution => isOsm ? 'OpenStreetMap contributors' : '';
+  static bool get isVworld => tileUrl.contains('vworld.kr');
+
+  /// 지도 하단 표기. 브이월드는 약관상 사용 표기가 의무.
+  static String get attribution => isOsm
+      ? 'OpenStreetMap contributors'
+      : isVworld
+          ? '브이월드 (국토교통부)'
+          : '';
 
   /// 첫 화면: 서울시청
   static final initialCenter = LatLng(37.5665, 126.9780);

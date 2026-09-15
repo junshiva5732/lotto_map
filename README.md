@@ -67,14 +67,18 @@ Java 의 AF_UNIX 소켓이 `%TEMP%` 아래에서 실패해 Gradle 이 "Unable to
 
 ## 지도 타일
 
-개발·검증은 OpenStreetMap 공개 타일을 쓴다. OSM 타일 서버는 대량 배포 앱에 사용 허가가 필요하므로
-(https://operations.osmfoundation.org/policies/tiles/) 출시 전 키 발급형 제공자로 바꾸는 것을 권장:
+배경지도는 **브이월드(VWorld, 국토교통부) WMTS** 를 쓴다. 인증키는 코드에 넣지 않고 빌드 옵션(`--dart-define=TILE_URL=...`)으로
+주입하며, 키가 들어 있는 `build_release.bat` 은 git 에서 제외되어 있다.
 
-```bash
-flutter build appbundle --release --dart-define=TILE_URL=https://api.vworld.kr/req/wmts/1.0.0/<VWORLD_KEY>/Base/{z}/{y}/{x}.png
+```bat
+build_release.bat appbundle     REM → build/app/outputs/bundle/release/app-release.aab
+build_release.bat apk           REM → 에뮬레이터 확인용
 ```
 
-(VWorld 는 국토부 무료 키. 바꾸면 `MapConfig.attribution` 이 비고 설정 화면의 OSM 표기도 사라진다.)
+- 키 관리: https://www.vworld.kr/mypo/mypo_apiKey_s001.do (브이월드 로그인 필요). 키를 바꾸면 `build_release.bat` 의 `TILE_URL` 만 수정.
+- 키 없이 `flutter build` 만 하면 OpenStreetMap 공개 타일로 폴백된다 (개발용. 대량 배포에는 OSM 정책상 부적합).
+- 브이월드 약관: 결과물에 브이월드 사용 표기 필요(지도 하단·설정 화면에 표기함). 상업적 이용은 별도 허락 대상이므로
+  트래픽이 커지면 고객센터(1661-0115)에 문의. 현재 키는 개발키이며 운영키는 별도 심사 신청.
 
 ## 출시 체크리스트
 
@@ -95,8 +99,8 @@ flutter build appbundle --release --dart-define=TILE_URL=https://api.vworld.kr/r
 - [x] 릴리즈 서명 키: `android/upload-keystore.jks` + `android/key.properties` (daily_fortune 과 같은 업로드 키 재사용, git 제외 — **반드시 백업**)
 - [x] 앱 아이콘: `tool/make_icon.py` → `dart run flutter_launcher_icons`
 - [x] 위치 권한: 선택 사용. Play 데이터 보안 양식 작성 시 `store/listing.md` 참고
-- [ ] (권장) 지도 타일을 키 발급형으로 교체 (위 "지도 타일")
-- [x] `flutter build appbundle --release` → `build/app/outputs/bundle/release/app-release.aab` (업로드는 Play Console 에서)
+- [x] 지도 타일: 브이월드 키 적용 (`build_release.bat`)
+- [x] `build_release.bat appbundle` → `build/app/outputs/bundle/release/app-release.aab` (업로드는 Play Console 에서)
 - [x] 스토어 등록 정보: `store/listing.md`, `store/icon-512.png`, `store/feature-graphic.png`, `store/screenshots/01~06.png`
 
 ### 4. iOS 출시 (Mac 필요)

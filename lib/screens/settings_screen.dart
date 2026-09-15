@@ -46,11 +46,13 @@ class SettingsScreen extends StatelessWidget {
               subtitle: Text('동행복권(dhlottery.co.kr) 당첨 판매점 조회. 262회(2007년) 이후 1·2등 배출점.\n'
                   '상호·주소·좌표는 동행복권 등록 정보 기준이며 실제와 다를 수 있습니다.'),
             ),
-            if (MapConfig.isOsm)
-              const ListTile(
-                leading: Icon(Icons.map_outlined),
-                title: Text('지도'),
-                subtitle: Text('© OpenStreetMap contributors'),
+            if (MapConfig.attribution.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.map_outlined),
+                title: const Text('지도'),
+                subtitle: Text(MapConfig.isVworld
+                    ? '배경지도: 브이월드(VWorld) 공간정보 오픈플랫폼, 국토교통부'
+                    : '© ${MapConfig.attribution}'),
               ),
             const Divider(),
             ListTile(

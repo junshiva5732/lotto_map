@@ -52,3 +52,6 @@ app.*.map.json
 # JVM 힙 덤프
 *.hprof
 tool/cache/
+
+# 지도 타일 키가 들어 있는 빌드 스크립트 (커밋 금지)
+/build_release.bat
