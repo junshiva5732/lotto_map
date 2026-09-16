@@ -808,12 +808,21 @@ class _Pin extends StatelessWidget {
                           color: Colors.black87,
                         ),
                       )
-                      : Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: size * .42,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black87,
+                      : Padding(
+                        // 두 자리 이상(52 등)도 잘리지 않게 원 안에 맞춰 축소
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: TextStyle(
+                              fontSize: size * .42,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.black87,
+                            ),
+                          ),
                         ),
                       ),
             ),
