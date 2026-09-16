@@ -282,7 +282,8 @@ class _MemoListScreenState extends State<MemoListScreen> {
                                         Theme.of(context).colorScheme.outline,
                                   ),
                                 ),
-                              if (m.spent > 0 || m.won > 0)
+                              if (m.visitedAt != null &&
+                                  (m.spent > 0 || m.won > 0))
                                 Text(
                                   '구매 ${formatWon(m.spent)} · 당첨 ${formatWon(m.won)}',
                                   style: TextStyle(

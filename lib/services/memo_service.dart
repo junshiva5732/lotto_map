@@ -29,13 +29,9 @@ class StoreMemo {
     required this.updatedAt,
   });
 
+  /// 금액은 방문 기록의 일부라 방문일이 없으면 기록으로 치지 않는다.
   bool get isEmpty =>
-      text.isEmpty &&
-      !favorite &&
-      rating == 0 &&
-      visitedAt == null &&
-      spent == 0 &&
-      won == 0;
+      text.isEmpty && !favorite && rating == 0 && visitedAt == null;
 
   StoreMemo copyWith({
     String? text,
@@ -105,6 +101,7 @@ class MemoService extends ChangeNotifier {
       try {
         for (final m in jsonDecode(raw) as List) {
           final memo = StoreMemo.fromJson(m as Map<String, dynamic>);
+          if (memo.isEmpty) continue; // 방문일 없이 금액만 남은 옛 기록 등은 버린다
           _memos[memo.storeId] = memo;
         }
       } catch (e) {

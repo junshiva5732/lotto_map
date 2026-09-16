@@ -124,6 +124,39 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     await launchUrl(Uri.parse('tel:${tel.replaceAll(RegExp(r'[^0-9+]'), '')}'));
   }
 
+  /// 방문일 지우기 = 방문 기록(날짜·구매/당첨 금액) 삭제. 확인 후 진행.
+  Future<void> _clearVisit() async {
+    _flushPending();
+    final m = memo;
+    final hasMoney = m.spent > 0 || m.won > 0;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('방문 기록 삭제'),
+            content: Text(
+              hasMoney
+                  ? '방문일과 구매·당첨 금액(${formatWon(m.spent)} / ${formatWon(m.won)})을 지울까요?'
+                  : '방문일을 지울까요?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('취소'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('삭제'),
+              ),
+            ],
+          ),
+    );
+    if (ok != true) return;
+    _spent.clear();
+    _won.clear();
+    await _memos.save(memo.copyWith(clearVisited: true, spent: 0, won: 0));
+  }
+
   Future<void> _pickVisited() async {
     final picked = await showDatePicker(
       context: context,
@@ -279,49 +312,46 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                               IconButton(
                                 tooltip: '방문일 지우기',
                                 icon: const Icon(Icons.close, size: 18),
-                                onPressed: () {
-                                  _flushPending();
-                                  _memos.save(
-                                    memo.copyWith(clearVisited: true),
-                                  );
-                                },
+                                onPressed: _clearVisit,
                               ),
                           ],
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _spent,
-                                  keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
-                                    labelText: '구매 금액',
-                                    suffixText: '원',
-                                    hintText: '예) 5000',
-                                    isDense: true,
-                                    border: OutlineInputBorder(),
+                        // 금액은 방문 기록의 일부: 방문일이 있을 때만 입력
+                        if (m.visitedAt != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _spent,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      labelText: '구매 금액',
+                                      suffixText: '원',
+                                      hintText: '예) 5000',
+                                      isDense: true,
+                                      border: OutlineInputBorder(),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: TextField(
-                                  controller: _won,
-                                  keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
-                                    labelText: '당첨 금액',
-                                    suffixText: '원',
-                                    hintText: '예) 50000',
-                                    isDense: true,
-                                    border: OutlineInputBorder(),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _won,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      labelText: '당첨 금액',
+                                      suffixText: '원',
+                                      hintText: '예) 50000',
+                                      isDense: true,
+                                      border: OutlineInputBorder(),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
                         TextField(
                           controller: _text,
                           maxLines: null,
