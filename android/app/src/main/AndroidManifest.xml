@@ -26,11 +26,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- AdMob App ID. TODO(출시 전): AdMob 에 앱 등록 후 실제 앱 ID 로 교체
-             (현재는 Google 공식 테스트 앱 ID) -->
+        <!-- AdMob App ID (실제 ID) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-7493209423244427~5490888953"/>
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

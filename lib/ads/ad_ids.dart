@@ -8,15 +8,16 @@ import 'package:flutter/foundation.dart';
 ///   개발 중 실제 광고를 클릭하면 무효 트래픽으로 계정이 정지될 수 있으므로.
 /// - 릴리즈 빌드(`--release`, 스토어 배포): 실제 ID.
 ///
-/// TODO(출시 전): AdMob 에 "로또 명당 지도" 앱을 추가하고 광고 단위 3개(배너/전면/보상형)를
-/// 만든 뒤 `_androidReal` 을 교체할 것. AndroidManifest.xml 의 APPLICATION_ID 도 함께.
 /// iOS 는 iOS 출시 시점에 `_iosReal` 과 ios/Runner/Info.plist 의 GADApplicationIdentifier 교체.
 class AdIds {
   AdIds._();
 
-  // ── 실제 ID ─────────────────────────────────────────────────────────
-  // TODO(AdMob): 실제 광고 단위 ID 로 교체. 교체 전까지는 릴리즈에서도 테스트 ID 가 나간다.
-  static const _androidReal = _androidTest;
+  // ── 실제 ID (AdMob 앱 "로또 명당 지도", 앱 ID ca-app-pub-7493209423244427~5490888953) ──
+  static const _androidReal = _Ids(
+    banner: 'ca-app-pub-7493209423244427/8301332239',
+    interstitial: 'ca-app-pub-7493209423244427/3223818263',
+    rewarded: 'ca-app-pub-7493209423244427/6988250561',
+  );
 
   // TODO(iOS): AdMob 에서 iOS 앱 등록 후 교체
   static const _iosReal = _iosTest;

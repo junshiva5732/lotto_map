@@ -84,11 +84,11 @@ build_release.bat apk           REM → 에뮬레이터 확인용
 ## 출시 체크리스트
 
 ### 1. AdMob
-- [ ] https://admob.google.com 에서 앱 등록 (Android) — 앱 이름 "로또 명당 지도", 패키지 `com.jun5731.lotto_map`
-- [ ] 광고 단위 3개 생성: 배너 / 전면 / 보상형
-- [ ] `lib/ads/ad_ids.dart` 의 `_androidReal` 을 실제 ID 로 교체
-- [ ] `android/app/src/main/AndroidManifest.xml` 의 `APPLICATION_ID` 교체 (현재 테스트 앱 ID)
-- [ ] 개발 중 실제 ID로 광고 클릭 금지 (계정 정지 사유)
+- [x] AdMob 앱 등록 (Android) — 앱 ID `ca-app-pub-7493209423244427~5490888953`
+- [x] 광고 단위 3개: 배너 `/8301332239`, 전면 `/3223818263`, 보상형 `/6988250561`
+- [x] `lib/ads/ad_ids.dart`, `AndroidManifest.xml` 에 실제 ID 적용 (디버그 빌드는 여전히 테스트 ID)
+- [ ] AdMob 에서 앱을 Play 스토어와 연결 (앱 게시 후 "앱 → 스토어 추가") → 광고 게재 검토 완료까지 며칠
+- [ ] 실제 ID 로 나가는 릴리즈 빌드에서 광고 클릭 금지 (계정 정지 사유). 내부 테스트 빌드도 실제 ID 임
 - [ ] AdMob 결제·세금 정보는 daily_fortune 과 같은 계정이므로 추가 작업 없음
 
 ### 2. 개인정보 / 정책
