@@ -29,7 +29,7 @@ android {
 
     defaultConfig {
         applicationId = "com.jun5731.lotto_map"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
