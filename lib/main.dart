@@ -10,6 +10,7 @@ import 'services/lucky_service.dart';
 import 'services/memo_service.dart';
 import 'services/navigation_apps.dart';
 import 'services/store_repository.dart';
+import 'moament_splash.dart';
 
 /// 앱 전역 서비스 묶음. 화면에 생성자로 넘긴다.
 class AppServices {
@@ -65,6 +66,7 @@ class _LottoMapAppState extends State<LottoMapApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: (context, child) => MoamentSplash(child: child!),
       title: '로또 명당 지도',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: kSeedColor, useMaterial3: true),
