@@ -12,11 +12,11 @@ import 'package:flutter/foundation.dart';
 class AdIds {
   AdIds._();
 
-  // ── 실제 ID (AdMob 앱 "로또 명당 지도", 앱 ID ca-app-pub-7493209423244427~5490888953) ──
+  // ── 실제 ID (AdMob 앱 "로또 명당 지도", 앱 ID ca-app-pub-6374122322136943~6860633720) ──
   static const _androidReal = _Ids(
-    banner: 'ca-app-pub-7493209423244427/8301332239',
-    interstitial: 'ca-app-pub-7493209423244427/3223818263',
-    rewarded: 'ca-app-pub-7493209423244427/6988250561',
+    banner: 'ca-app-pub-6374122322136943/1385925704',
+    interstitial: 'ca-app-pub-6374122322136943/1194354014',
+    rewarded: 'ca-app-pub-6374122322136943/1142383128',
   );
 
   // TODO(iOS): AdMob 에서 iOS 앱 등록 후 교체
@@ -34,8 +34,12 @@ class AdIds {
     rewarded: 'ca-app-pub-3940256099942544/1712485313',
   );
 
+  /// 릴리즈 빌드를 기기에서 직접 확인할 때는 --dart-define=TEST_ADS=true 로 빌드해 테스트 광고만 받는다.
+  /// (실제 광고를 개발자·자동 탭이 누르면 무효 트래픽으로 계정이 정지된다. 2026-11 정지 원인 후보)
+  static const _forceTest = bool.fromEnvironment('TEST_ADS');
+
   static _Ids get _current {
-    if (kReleaseMode) return Platform.isAndroid ? _androidReal : _iosReal;
+    if (kReleaseMode && !_forceTest) return Platform.isAndroid ? _androidReal : _iosReal;
     return Platform.isAndroid ? _androidTest : _iosTest;
   }
 
